@@ -44,20 +44,39 @@ def agent_ui():
             except Exception as exc: st.error(f'분석을 완료하지 못했습니다. {type(exc).__name__}. API 설정과 연결 상태를 확인하세요.')
     result=st.session_state.get('quality_review')
     if result:
-        st.subheader(f"문서 기반 사전 검토: {result['verdict']}")
+        label={'CONFORMING':'적합','NONCONFORMING':'부적합','REVIEW_REQUIRED':'추가 검토 필요'}.get(result['verdict'],result['verdict'])
+        st.subheader(f"문서 기반 사전 검토: {label} ({result['verdict']})")
         st.write('실행 모드:',result['mode'])
         st.write('소재:',result['mtr'].get('Material Grade'),'| 공급업체:',result['mtr'].get('Supplier'),'| Certificate:',result['mtr'].get('Certificate Number'))
         st.write('Heat:',result['mtr'].get('Heat Number'),'| Lot:',result['mtr'].get('Lot Number'))
         st.markdown('**요구조건과 검사 결과**')
         if result['mode']=='AI Agent Mode':
+            summary_rows=[]
+            for row in result['rows']:
+                checked=row.get('comparison_value') or {}
+                status=row.get('result','NOT_CHECKED')
+                summary_rows.append({'항목':row['field'],'PO 요구조건':row.get('requirement','') if row.get('po_evidence_status')=='VERIFIED' else '원문 확인 필요',
+                    'MTR 검사값':(' '.join(str(checked.get(k,'')) for k in ('value','unit')).strip() if checked else '확인 불가'),
+                    '비교 결과':{'PASS':'적합','OUT_OF_RANGE':'부적합','MISMATCH':'불일치','NOT_CHECKED':'확인 필요'}.get(status,status),
+                    '측정값 출처':row.get('comparison_source') or '없음',
+                    'PO 기준 출처':row.get('po_comparison_source') or '미확인',
+                    '원문 근거':('확인' if row.get('evidence_status')=='VERIFIED' and row.get('po_evidence_status')=='VERIFIED' else '확인 필요')})
+            st.dataframe(summary_rows,hide_index=True,width='stretch')
+            st.caption('비교 결과는 교육용 기준에 대한 사전 검사입니다. 원문 근거가 부족하면 확인 필요로 표시합니다.')
             display=[]
             for row in result['rows']:
                 display.append({'항목':row['field'], 'LLM 원본':row.get('llm_raw'), 'LLM 단위':row.get('llm_raw_unit'), 'LLM 정규화':str(row.get('llm_normalized') or ''), 'Python 추출':str(row.get('python_value') or ''), '검사값':str(row.get('comparison_value') or ''), '검사값 출처':row.get('comparison_source') or '없음', '원문 근거':row.get('evidence') or '', '문서':row.get('document'), '페이지':row.get('page'), '근거 상태':row.get('evidence_status'), '교차 확인':row.get('cross_check_status'), 'PO 근거 상태':row.get('po_evidence_status'), 'PO LLM 조건':str(row.get('po_llm_bounds') or ''), 'PO 근거':str(row.get('po_evidence') or ''), '규격 비교':('FAIL' if row['result'] in ('OUT_OF_RANGE','MISMATCH') else row['result']), '추가 검토 사유':'; '.join(row.get('review_reasons',[]))})
-            st.dataframe(display,hide_index=True,width='stretch')
-            st.caption('규격 비교 PASS는 별도로 표시된 원문 근거 확인 상태와 구분됩니다. 검사값이 없으면 비교하지 않습니다.')
+            with st.expander('항목별 추출값 및 원문 근거 상세'): st.dataframe(display,hide_index=True,width='stretch')
             with st.expander('식별정보 LLM·Python 교차 확인'): st.dataframe(result.get('identity_records',[]),hide_index=True,width='stretch')
+            with st.expander('AI 원문 인용 확인 기록'):
+                st.write(result.get('extraction_issues') or '확인되지 않은 AI 인용 없음')
         else: st.dataframe(result['rows'],hide_index=True,width='stretch')
-        st.write('부적합 및 확인 필요 사항',result['findings'] or '없음')
+        st.markdown('**부적합 및 확인 필요 사항**')
+        if result['findings']:
+            st.dataframe([{'항목':f.get('field',''), '유형':f.get('type',''),
+                '내용':f.get('detail') or ('기준: '+str(f.get('expected',''))+' / 측정: '+str(f.get('actual',''))+' '+str(f.get('unit',''))),
+                '출처':f.get('source','검증 도구')} for f in result['findings']],hide_index=True,width='stretch')
+        else: st.write('발견 사항 없음')
         if result['mode']=='AI Agent Mode':
             st.caption('다음 설명은 AI 생성 문장으로 별도 검증이 필요합니다. 판정은 프로그램 결과입니다.')
             st.write(result['summary'])
