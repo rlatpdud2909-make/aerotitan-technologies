@@ -122,6 +122,13 @@ def agent_ui():
                 st.markdown('**담당자 확인 사항 · AI 초안**');st.write(draft['draft']['review'])
                 st.markdown('**공급업체에 확인할 내용 · AI 초안**');st.write(draft['draft']['supplier_request'])
                 st.markdown('**문의 이메일 초안 — 발송되지 않음**')
+                # Keep editable text legible even when the browser uses a dark theme.
+                st.markdown('''<style>
+                .st-key-followup_subject input, .st-key-followup_email textarea {
+                    color: #10243a !important; background-color: #ffffff !important;
+                    caret-color: #10243a !important;
+                }
+                </style>''',unsafe_allow_html=True)
                 subject=st.text_input('제목',value=draft['draft']['email_subject'],key='followup_subject')
                 body=st.text_area('본문',value=draft['draft']['email_body'],height=220,key='followup_email')
                 st.download_button('문의 초안 TXT 다운로드',f'검토 전 초안 — 자동 발송되지 않음\n제목: {subject}\n\n{body}',file_name='supplier_followup_draft.txt',mime='text/plain')
