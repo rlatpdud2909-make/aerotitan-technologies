@@ -14,7 +14,7 @@ def agent_ui():
     st.warning('교육용 모의 데이터 전용입니다. 실제 기업 기밀자료를 업로드하지 마세요. 검토 결과는 최종 입고 승인이 아닙니다.')
     mode=st.radio('분석 모드',['Rule-Based Mode','AI Agent Mode'],horizontal=True,key='agent_mode')
     st.caption('규칙 기반 모드는 정해진 교육용 PDF 형식만 지원합니다. AI 모드는 선택한 API 설정이 필요합니다.')
-    provider=st.radio('AI 제공자',['학교 API','OpenAI'],horizontal=True,key='agent_provider') if mode=='AI Agent Mode' else 'OpenAI'
+    provider=st.radio('AI 서비스',['기본 AI','OpenAI'],horizontal=True,key='agent_provider') if mode=='AI Agent Mode' else 'OpenAI'
     source=st.radio('문서 선택',['Demo 문서','직접 업로드'],horizontal=True,key='agent_source')
     po=mtr=None
     if source=='Demo 문서':
@@ -27,16 +27,19 @@ def agent_ui():
     signature=hashlib.sha256((po or b'')+b'\0'+(mtr or b'')+mode.encode()+provider.encode()).hexdigest()
     if st.session_state.get('quality_signature') != signature:
         st.session_state.pop('quality_review',None)
+    if mode=='AI Agent Mode':
+        st.caption('AI 문서 분석에는 시간이 걸릴 수 있습니다. 완료되면 아래에 검토 결과가 표시됩니다.')
     if st.button('AI 품질검사 실행' if mode=='AI Agent Mode' else '품질검사 실행',type='primary'):
         st.session_state.pop('quality_review',None)
         if not po or not mtr: st.error('구매발주서와 시험성적서를 모두 선택하세요.')
         else:
             try:
                 with st.spinner('문서를 검토하고 있습니다...'):
-                    school=provider=='학교 API'
+                    school=provider=='기본 AI'
                     result=review(po,mtr,'ai' if mode=='AI Agent Mode' else 'rule',setting('SCHOOL_API_KEY' if school else 'OPENAI_API_KEY'),setting('SCHOOL_MODEL' if school else 'OPENAI_MODEL'),provider='school' if school else 'openai',base_url=setting('SCHOOL_API_BASE_URL') if school else None)
                 st.session_state['quality_review']=result
                 st.session_state['quality_signature']=signature
+                st.success('문서 검토가 완료되었습니다. 아래에서 결과와 근거를 확인하세요.')
             except ValueError as exc: st.error(f'분석 설정 또는 문서 오류: {str(exc)[:200]}')
             except Exception as exc: st.error(f'분석을 완료하지 못했습니다. {type(exc).__name__}. API 설정과 연결 상태를 확인하세요.')
     result=st.session_state.get('quality_review')
