@@ -9,6 +9,11 @@ def setting(name):
     try: return st.secrets.get(name) or os.getenv(name)
     except Exception: return os.getenv(name)
 
+def reset_followup_checks():
+    for key in list(st.session_state):
+        if key.startswith('followup_check_'):
+            del st.session_state[key]
+
 def agent_ui():
     st.markdown('### AeroTitan Quality Agent')
     st.warning('교육용 모의 데이터 전용입니다. 실제 기업 기밀자료를 업로드하지 마세요. 검토 결과는 최종 입고 승인이 아닙니다.')
@@ -30,6 +35,7 @@ def agent_ui():
         st.session_state.pop('followup_draft',None)
         st.session_state.pop('followup_email',None)
         st.session_state.pop('followup_subject',None)
+        reset_followup_checks()
     if mode=='AI Agent Mode':
         st.caption('AI 문서 분석에는 시간이 걸릴 수 있습니다. 완료되면 아래에 검토 결과가 표시됩니다.')
     if st.button('AI 품질검사 실행' if mode=='AI Agent Mode' else '품질검사 실행',type='primary'):
@@ -37,6 +43,7 @@ def agent_ui():
         st.session_state.pop('followup_draft',None)
         st.session_state.pop('followup_email',None)
         st.session_state.pop('followup_subject',None)
+        reset_followup_checks()
         if not po or not mtr: st.error('구매발주서와 시험성적서를 모두 선택하세요.')
         else:
             try:
@@ -106,6 +113,21 @@ def agent_ui():
             if facts['unconfirmed_items']:
                 st.caption('미확인 항목은 원문에 값이 없다는 뜻이 아닙니다. 원문에서 다시 확인해야 합니다.')
                 st.dataframe(facts['unconfirmed_items'],hide_index=True,width='stretch')
+            st.markdown('**담당자 확인표**')
+            st.caption('담당자가 직접 확인한 항목만 표시하세요. 체크 상태는 현재 화면에서만 유지되며, 실제 소재 보류나 공식 검사 기록을 뜻하지 않습니다.')
+            checks=[
+                ('소재 식별정보 확인', 'PO·MTR과 입고 소재의 Heat·Lot을 대조해 같은 소재의 문서인지 확인합니다.'),
+                ('시험성적서 원문 확인', '문제 항목의 수치와 단위를 원본 MTR에서 확인합니다.'),
+                ('발주 요구조건 원문 확인', '구매발주서에서 요구조건과 상한·하한, 단위를 확인합니다.'),
+                ('소재의 현재 상태 확인', '담당자가 보류 여부와 생산 투입 상태를 확인합니다. 이 화면은 실제 상태를 조회하지 않습니다.'),
+                ('추가 자료와 조치 필요성 확인', '확인 결과에 따라 시험 기록, 재시험, 공급업체 확인 등이 필요한지 내부 절차에 따라 검토합니다.'),
+            ]
+            for index,(title,reason) in enumerate(checks):
+                st.checkbox(title,key=f'followup_check_{index}')
+                st.caption(reason)
+            st.markdown('**확인 결과에 따른 대응 검토**')
+            st.markdown('- 문서나 소재 식별정보가 불명확하면 원본과 실물을 다시 확인합니다.\n- 수치가 확인되면 내부 절차에 따라 추가 자료, 재시험 또는 공급업체 확인의 필요성을 검토합니다.\n- 조치 및 소재의 최종 처분은 담당자가 결정합니다.')
+            st.info('아직 확인되지 않은 원인, 실제 보류 상태, 추가 시험 필요 여부는 이 화면에서 확정하지 않습니다.')
             if st.button('AI 대응 방향 확인'):
                 st.session_state.pop('followup_draft',None)
                 st.session_state.pop('followup_email',None)
