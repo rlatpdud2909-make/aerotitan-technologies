@@ -144,11 +144,14 @@ def agent_ui():
                 except Exception as exc: st.error(f'대응 방향을 정리하지 못했습니다: {type(exc).__name__}. AI 서비스 연결 상태를 확인하세요.')
             draft=st.session_state.get('followup_draft')
             if draft:
-                labels=[('immediate','이번 사례의 우선 확인'),('options','확인 결과에 따른 대응 선택지')]
-                for key,title in labels:
-                    st.markdown(f'**{title} · AI 제안**');st.write(draft['draft'][key])
+                st.markdown('**확인 결과에 따른 다음 단계 · AI 제안**')
+                st.caption('아래는 확인 결과별 가정입니다. 해당 상황이 실제로 발생했다는 뜻이 아닙니다.')
+                for branch in draft['draft']['branches']:
+                    st.markdown(f"**{branch['condition']}**")
+                    st.write('검토할 행동:',branch['action'])
+                    st.caption('이유: '+branch['why'])
                 st.caption('AI 제안은 실행된 조치가 아닙니다. 내용과 근거를 확인한 뒤 담당자가 결정합니다.')
-                text='AI 후속 대응 제안 — 담당자 확인 필요\n\n'+'\n\n'.join(f"{title}\n{draft['draft'][key]}" for key,title in labels)
+                text='AI 후속 대응 제안 — 가정별 검토 사항, 담당자 확인 필요\n\n'+'\n\n'.join(f"{b['condition']}\n검토할 행동: {b['action']}\n이유: {b['why']}" for b in draft['draft']['branches'])
                 st.download_button('대응 방향 TXT 다운로드',text,file_name='quality_followup_guidance.txt',mime='text/plain')
                 with st.expander('AI에 전달된 검사 근거'): st.json(draft['facts'])
         if result['mode']=='AI Agent Mode':
