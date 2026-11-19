@@ -1,0 +1,121 @@
+{
+  "id": "DEMO_SPEC_TI64_V1",
+  "source_type": "SYNTHETIC_DEMO",
+  "notice": "SYNTHETIC EDUCATIONAL LIMITS; NOT SAE REQUIREMENTS; NOT VALID FOR MATERIAL ACCEPTANCE",
+  "rules": [
+    {
+      "requirement_id": "DEMO-R01",
+      "field": "Al",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "wt%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "min": 5.5,
+      "min_inclusive": true,
+      "max": 6.5,
+      "max_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R02",
+      "field": "V",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "wt%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "min": 3.5,
+      "min_inclusive": true,
+      "max": 4.5,
+      "max_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R03",
+      "field": "Fe",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "wt%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "max": 0.3,
+      "max_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R04",
+      "field": "O",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "wt%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "max": 0.2,
+      "max_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R05",
+      "field": "C",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "wt%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "max": 0.08,
+      "max_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R06",
+      "field": "N",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "wt%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "max": 0.05,
+      "max_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R07",
+      "field": "H",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "wt%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "max": 0.015,
+      "max_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R08",
+      "field": "Yield Strength",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "MPa",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "min": 830,
+      "min_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R09",
+      "field": "Ultimate Tensile Strength",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "MPa",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "min": 900,
+      "min_inclusive": true
+    },
+    {
+      "requirement_id": "DEMO-R10",
+      "field": "Elongation",
+      "material": "Ti-6Al-4V",
+      "product_form": "Round Bar",
+      "unit": "%",
+      "source_type": "SYNTHETIC_DEMO",
+      "description": "Invented educational purchase condition; not an industry specification.",
+      "min": 10,
+      "min_inclusive": true
+    }
+  ]
+}

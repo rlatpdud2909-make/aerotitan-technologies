@@ -1,0 +1,21 @@
+case_id,split,supplier,material,purchase_order_id,certificate_id,document_layout,purchase_order,material_test_report
+case_001,development,Northstar Alloy Supply (Fictional),Ti-6Al-4V,AT-PO-2026-001,MTR-7001,A,data/demo_documents/development/case_001/purchase_order.pdf,data/demo_documents/development/case_001/material_report.pdf
+case_002,development,Meridian Metalworks (Fictional),Ti-6Al-4V,AT-PO-2026-002,MTR-7002,B,data/demo_documents/development/case_002/purchase_order.pdf,data/demo_documents/development/case_002/material_report.pdf
+case_003,development,Aster Materials Group (Fictional),Ti-6Al-4V,AT-PO-2026-003,MTR-7003,C,data/demo_documents/development/case_003/purchase_order.pdf,data/demo_documents/development/case_003/material_report.pdf
+case_004,development,Northstar Alloy Supply (Fictional),Ti-6Al-4V,AT-PO-2026-004,MTR-7004,A,data/demo_documents/development/case_004/purchase_order.pdf,data/demo_documents/development/case_004/material_report.pdf
+case_005,development,Meridian Metalworks (Fictional),Ti-6Al-4V,AT-PO-2026-005,MTR-7005,B,data/demo_documents/development/case_005/purchase_order.pdf,data/demo_documents/development/case_005/material_report.pdf
+case_006,development,Aster Materials Group (Fictional),Ti-6Al-4V,AT-PO-2026-006,MTR-7006,C,data/demo_documents/development/case_006/purchase_order.pdf,data/demo_documents/development/case_006/material_report.pdf
+case_007,development,Northstar Alloy Supply (Fictional),Ti-6Al-4V,AT-PO-2026-007,MTR-7007,A,data/demo_documents/development/case_007/purchase_order.pdf,data/demo_documents/development/case_007/material_report.pdf
+case_008,development,Meridian Metalworks (Fictional),Ti-6Al-4V,AT-PO-2026-008,MTR-7008,B,data/demo_documents/development/case_008/purchase_order.pdf,data/demo_documents/development/case_008/material_report.pdf
+case_009,development,Aster Materials Group (Fictional),Ti-6Al-4V,AT-PO-2026-009,MTR-7009,C,data/demo_documents/development/case_009/purchase_order.pdf,data/demo_documents/development/case_009/material_report.pdf
+case_010,development,Northstar Alloy Supply (Fictional),Ti-6Al-4V,AT-PO-2026-010,MTR-7010,A,data/demo_documents/development/case_010/purchase_order.pdf,data/demo_documents/development/case_010/material_report.pdf
+case_011,development,Meridian Metalworks (Fictional),Ti-6Al-4V,AT-PO-2026-011,MTR-7011,B,data/demo_documents/development/case_011/purchase_order.pdf,data/demo_documents/development/case_011/material_report.pdf
+case_012,development,Aster Materials Group (Fictional),Ti-6Al-4V,AT-PO-2026-012,MTR-7012,C,data/demo_documents/development/case_012/purchase_order.pdf,data/demo_documents/development/case_012/material_report.pdf
+case_013,development,Northstar Alloy Supply (Fictional),Ti-6Al-4V,AT-PO-2026-013,MTR-7013,A,data/demo_documents/development/case_013/purchase_order.pdf,data/demo_documents/development/case_013/material_report.pdf
+case_014,development,Meridian Metalworks (Fictional),Ti-6Al-4V,AT-PO-2026-014,MTR-7014,B,data/demo_documents/development/case_014/purchase_order.pdf,data/demo_documents/development/case_014/material_report.pdf
+case_015,development,Aster Materials Group (Fictional),Ti-6Al-4V,AT-PO-2026-015,MTR-7015,C,data/demo_documents/development/case_015/purchase_order.pdf,data/demo_documents/development/case_015/material_report.pdf
+case_016,development,Northstar Alloy Supply (Fictional),Ti-6Al-4V,AT-PO-2026-016,MTR-7016,A,data/demo_documents/development/case_016/purchase_order.pdf,data/demo_documents/development/case_016/material_report.pdf
+case_017,development,Meridian Metalworks (Fictional),Ti-6Al-4V,AT-PO-2026-017,MTR-7017,B,data/demo_documents/development/case_017/purchase_order.pdf,data/demo_documents/development/case_017/material_report.pdf
+case_018,development,Aster Materials Group (Fictional),Ti-6Al-4V,AT-PO-2026-018,MTR-7018,C,data/demo_documents/development/case_018/purchase_order.pdf,data/demo_documents/development/case_018/material_report.pdf
+case_019,development,Northstar Alloy Supply (Fictional),Ti-6Al-4V,AT-PO-2026-019,MTR-7019,A,data/demo_documents/development/case_019/purchase_order.pdf,data/demo_documents/development/case_019/material_report.pdf
+case_020,development,Meridian Metalworks (Fictional),Ti-6Al-4V,AT-PO-2026-020,MTR-7020,B,data/demo_documents/development/case_020/purchase_order.pdf,data/demo_documents/development/case_020/material_report.pdf
