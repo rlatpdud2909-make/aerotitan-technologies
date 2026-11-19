@@ -40,19 +40,21 @@ def create_draft(result, api_key, base_url, model, client=None):
         'unconfirmed_items는 미확인 항목이며 원문에 값이 존재하지 않는다는 뜻이 아닙니다. '
         '원인은 확인되지 않았으며 최종 결정은 담당자가 합니다. '
         '검사 사실과 확인되지 않은 사항을 구분하고 후속 대응을 실행한 것처럼 쓰지 마세요. 제공된 정보만으로 기타 미확인 사항이나 문제가 없다고 단정하지 마세요. '
-        '먼저 할 확인, 원문·식별정보 확인, 결과에 따른 조건부 선택지를 구체적으로 안내하세요. '
+        '검사 사실과 공통 확인표는 화면에 이미 표시됩니다. 같은 내용을 길게 반복하지 마세요. '
+        '이 사례에 필요한 우선 확인과 확인 결과에 따른 조건부 선택지만 구체적으로 안내하세요. '
         'immediate는 이미 확인했다는 반복이 아니라 담당자가 우선 검토할 행동을 제시하세요. '
+        'options는 "문서가 불명확하면 원본 확인", "시험값이 확인되면 내부 절차에 따라 재시험 필요성 검토"처럼 조건과 검토할 행동을 함께 제시하세요. '
         '검증 가능한 근거가 부족하면 먼저 원문 확인을 권고하고 가정한 원인이나 해결책을 확정하지 마세요. '
         '재시험, 문서 정정, 공급업체 문의는 필요성과 승인 여부를 담당자가 검토할 선택지로만 제시하세요. '
         '이메일을 작성하지 마세요. 번호 목록 숫자는 쓰지 마세요. '
-        '한국어 JSON 객체만 반환하세요. 필수 키는 situation, immediate, verify, options, caution이며 값은 문자열입니다.')
+        '한국어 JSON 객체만 반환하세요. 필수 키는 immediate, options이며 값은 문자열입니다.')
     response=client.chat.completions.create(model=model,messages=[{'role':'system','content':system},{'role':'user','content':json.dumps(facts,ensure_ascii=False)}])
     if not response.choices or getattr(response.choices[0],'finish_reason',None)=='length': raise ValueError('AI 초안 응답이 비어 있거나 잘렸습니다.')
     raw=(response.choices[0].message.content or '').strip()
     if raw.startswith('```') and '\n' in raw: raw=raw.split('\n',1)[1].rsplit('```',1)[0].strip()
     try: draft=json.loads(raw)
     except (ValueError,TypeError) as exc: raise ValueError('AI 초안 형식을 확인할 수 없습니다.') from exc
-    keys=('situation','immediate','verify','options','caution')
+    keys=('immediate','options')
     if not isinstance(draft,dict) or any(not isinstance(draft.get(k),str) or not draft[k].strip() for k in keys):
         raise ValueError('AI 초안에 필수 내용이 빠졌습니다.')
     if re.search(r'(불합격|부적합)\s*(처리|확정|통보)|판정을\s*내리|최종\s*(승인|판정).{0,12}(완료|확정|처리)|내부\s*(시험|측정)|기타\s*미확인\s*사항.{0,10}없',json.dumps(draft,ensure_ascii=False)):

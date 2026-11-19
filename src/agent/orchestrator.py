@@ -46,6 +46,17 @@ def review(po_bytes,mtr_bytes,mode='rule',api_key=None,model=None,client=None,pr
                 log.append({'origin':'python_fallback','call_id':None,'tool':name,'comparison_inputs':tool_inputs(name,context),'status':'success','result':results[name]})
             except Exception:
                 log.append({'origin':'python_fallback','call_id':None,'tool':name,'status':'failed','result':'Tool failed'})
+    # Report assembly is deterministic. If the model omitted or failed this
+    # non-verdict tool, assemble its data locally and record the true origin.
+    # Other missing validation tools remain missing and cannot yield a pass.
+    if 'build_quality_report' not in results:
+        try:
+            results['build_quality_report']=run_tool('build_quality_report',context)
+            log.append({'origin':'python_report_fallback','call_id':None,'tool':'build_quality_report',
+                        'status':'success','result':results['build_quality_report']})
+        except Exception:
+            log.append({'origin':'python_report_fallback','call_id':None,'tool':'build_quality_report',
+                        'status':'failed','result':'Tool failed'})
     # Do not allow a model to call missing-fields before extraction issues are considered or suppress mandatory findings.
     if 'detect_missing_fields' in results:
         results['detect_missing_fields']=run_tool('detect_missing_fields',context)
