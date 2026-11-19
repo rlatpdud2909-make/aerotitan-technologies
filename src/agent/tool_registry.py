@@ -5,7 +5,8 @@ NAMES=['validate_material_identity','validate_chemical_composition','validate_me
 def tool_inputs(name, context):
     if context.get('mode_source') != 'LLM': return {'source':'Python'}
     if name in ('validate_chemical_composition','validate_mechanical_properties'):
-        return {'source':'LLM','values':{k:v for k,v in context['values'].items() if (k in CHEM)==(name=='validate_chemical_composition')}, 'verified_rule_fields':list(context['valid_rules']), 'rules':context['spec']['rules']}
+        records=[r for r in context.get('records',[]) if (r['field'] in CHEM)==(name=='validate_chemical_composition') and r.get('comparison_value') is not None]
+        return {'source':'mixed: LLM measurements and verified PO requirements', 'values':{k:v for k,v in context['values'].items() if (k in CHEM)==(name=='validate_chemical_composition')}, 'verified_rule_fields':list(context['valid_rules']), 'rules':context['spec']['rules'], 'provenance':[{'field':r['field'],'measurement_source':r.get('comparison_source'),'requirement_source':r.get('po_comparison_source'),'po_evidence':r.get('po_evidence')} for r in records]}
     if name in ('validate_material_identity','validate_traceability'):
         return {'source':'LLM','po':{r['field']:r['comparison_value'] for r in context.get('identity_records',[]) if r['document']=='PO'}, 'mtr':{r['field']:r['comparison_value'] for r in context.get('identity_records',[]) if r['document']=='MTR'}}
     return {'source':'LLM','description':'Validated evidence and issue list' if name=='detect_missing_fields' else 'Report data aggregation; HTML generated separately'}

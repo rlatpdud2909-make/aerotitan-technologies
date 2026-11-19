@@ -15,6 +15,33 @@ def equal_number(a,b):
     try: return Decimal(str(a)).is_finite() and Decimal(str(a))==Decimal(str(b))
     except (InvalidOperation,ValueError,TypeError): return False
 
+def independent_po_rule(rule, context, fields):
+    """Verify one unambiguous educational PO row without concealing conflicts."""
+    pages=context.get('po_pages', [])
+    if len(pages)!=1 or rule['field'] not in context['valid_rules']:
+        return None
+    tokens=[line.strip() for line in pages[0].splitlines() if line.strip()]
+    header=['Requirement','Minimum','Maximum','Unit']
+    starts=[i for i in range(len(tokens)-3) if tokens[i:i+4]==header]
+    indexes=[i for i,x in enumerate(tokens) if x==rule['field']]
+    row=[rule['field'],str(rule.get('min','-')),str(rule.get('max','-')),rule['unit']]
+    if len(starts)!=1 or len(indexes)!=1 or indexes[0]<=starts[0]+3 or tokens[indexes[0]:indexes[0]+4]!=row:
+        return None
+    bounds={k:str(rule[k]) for k in ('min','max') if k in rule}; seen=set()
+    for f in fields:
+        suffix=re.fullmatch(r'(.+?)\s+(minimum|maximum)',f.field,re.I)
+        base=norm_symbol(suffix.group(1)) if suffix else norm_symbol(f.field)
+        if f.document!='PO' or base!=rule['field']: continue
+        matches=[k for k,v in bounds.items() if equal_number(f.value,v)]
+        declared=('min' if suffix.group(2).lower()=='minimum' else 'max') if suffix else None
+        # The model's quote can be incomplete or incorrect. The PO criterion is
+        # taken solely from the independently verified row, never that quote.
+        # Any conflicting value, bound, unit, duplicate or page still blocks it.
+        if (len(matches)!=1 or f.unit!=rule['unit'] or (declared and declared!=matches[0])
+            or matches[0] in seen or f.page!=1): return None
+        seen.add(matches[0])
+    return {'page':1,'quote':' '.join(row),'bounds':bounds}
+
 def po_rule_verified(rule, verified, all_fields=None):
     """Require the model to extract every applicable bound from the PO."""
     needed={bound for bound in ('min','max') if bound in rule}; seen=set(); used=[]; values={}
@@ -74,6 +101,9 @@ def reconcile(context, extraction, verified):
         raw=[x for x in all_fields if x.document=='MTR' and norm_symbol(x.field)==name]
         confirmed=[x for x,n in verified if x.document=='MTR' and n==name]
         required_ok,po_evidence,po_values=po_rule_verified(rule,verified,all_fields)
+        independent=None if required_ok else independent_po_rule(rule,context,all_fields)
+        if independent:
+            required_ok=True; po_values=independent['bounds']
         # Missing values and duplicate or contradictory model readings are never substituted.
         selected=confirmed[0] if len(raw)==1 and len(confirmed)==1 else None
         reasons=[]
@@ -91,6 +121,10 @@ def reconcile(context, extraction, verified):
         else:
             result['issues'].append(f'{name}: '+ '; '.join(reasons))
         records.append({'field':name,'llm_raw':raw[0].value if raw else None,'llm_raw_unit':raw[0].unit if raw else None,'llm_normalized':{'value':selected.value,'unit':selected.unit} if selected else None,'python_value':py,'comparison_value':comparison,'comparison_source':'LLM' if comparison else None,'document':'MTR','page':raw[0].page if raw else None,'evidence':raw[0].quote if raw else None,'evidence_status':'VERIFIED' if selected else 'UNVERIFIED','cross_check_status':'MATCH' if selected and py and not any('不一致' in x or '불일치' in x or '검증 불가' in x for x in reasons) else 'UNVERIFIED','po_llm_bounds':po_values,'po_comparison_source':'LLM' if required_ok else None,'po_evidence':[{'page':x.page,'quote':x.quote,'value':x.value} for x in po_evidence],'po_evidence_status':'VERIFIED' if required_ok and name in context['valid_rules'] else 'UNVERIFIED','review_reasons':reasons})
+        if independent:
+            records[-1].update(po_llm_bounds={},po_llm_evidence_status='UNVERIFIED',po_comparison_bounds=po_values,
+                po_comparison_source='Python 원문 독립 확인',
+                po_evidence=[{'page':independent['page'],'quote':independent['quote']}])
     result['spec']=dict(context['spec'],rules=llm_rules)
     po={};mtr={}; identity_records=[]
     for pfield,mfield in IDENTITY:

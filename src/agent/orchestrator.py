@@ -22,7 +22,20 @@ def review(po_bytes,mtr_bytes,mode='rule',api_key=None,model=None,client=None,pr
     from src.agent.reconciliation import reconcile
     python_context=context
     context=reconcile(python_context,extraction,verified)
-    context['issues'].extend(issues)
+    # Preserve model evidence warnings for audit; only resolve a PO warning when
+    # the complete source row was independently checked without conflicts.
+    context['extraction_issues']=list(issues)
+    resolved=set()
+    from src.agent.field_names import canonical_measurement
+    import re
+    for record in context['records']:
+        if record.get('po_comparison_source')!='Python 원문 독립 확인': continue
+        for field in extraction.fields:
+            suffix=re.fullmatch(r'(.+?)\s+(minimum|maximum)',field.field,re.I)
+            base=canonical_measurement(suffix.group(1) if suffix else field.field)
+            if field.document=='PO' and base==record['field']:
+                resolved.add(f'AI 추출 근거 확인 실패: PO {field.field}')
+    context['issues'].extend(x for x in issues if x not in resolved)
     try:
         results,log,summary,usage=(call_school_tools(client,model,context) if provider=='school' else call_tools(client,model,context))
     except ToolsUnsupported:
@@ -64,5 +77,5 @@ def review(po_bytes,mtr_bytes,mode='rule',api_key=None,model=None,client=None,pr
             row.update(record)
             if record['comparison_value'] is None:
                 row['result']='NOT_CHECKED'
-    report['extraction']=extraction.model_dump(); report['usage']={'extraction':str(extraction_usage),'tool_calls':usage}
+    report['extraction']=extraction.model_dump(); report['extraction_issues']=context['extraction_issues']; report['usage']={'extraction':str(extraction_usage),'tool_calls':usage}
     return report
