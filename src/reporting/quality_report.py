@@ -5,12 +5,18 @@ def render_report(r):
     def e(x): return escape(str(x if x is not None else ''))
     ai=r.get('mode')=='AI Agent Mode'
     if ai:
-        cols=[('field','항목'),('llm_raw','LLM 원본'),('llm_raw_unit','LLM 단위'),('llm_normalized','LLM 정규화'),('python_value','Python 추출'),('comparison_value','검사값'),('comparison_source','검사값 출처'),('document','문서'),('page','페이지'),('evidence_status','MTR 근거 상태'),('cross_check_status','교차 확인'),('po_evidence_status','PO 근거 상태'),('po_llm_bounds','PO LLM 조건'),('po_evidence','PO 원문 근거'),('evidence','MTR 원문 근거'),('review_reasons','추가 검토 사유'),('requirement','요구조건'),('result','규격 비교')]
+        cols=[('field','항목'),('requirement','PO 요구조건'),('comparison_value','MTR 검사값'),('result','규격 비교'),('comparison_source','MTR 검사값 출처'),('po_comparison_source','PO 기준 출처'),('po_evidence_status','PO 근거 상태'),('evidence_status','MTR 근거 상태'),('cross_check_status','교차 확인'),('po_evidence','PO 원문 근거'),('evidence','MTR 원문 근거'),('review_reasons','추가 검토 사유'),('llm_raw','LLM 원본'),('python_value','Python 추출')]
     else:
         cols=[('field','항목'),('requirement','요구조건'),('actual','측정값'),('unit','단위'),('result','결과'),('source','근거')]
-    rows=''.join('<tr>'+''.join(f"<td>{e('FAIL' if k=='result' and row.get(k) in ('OUT_OF_RANGE','MISMATCH') else row.get(k))}</td>" for k,_ in cols)+'</tr>' for row in r['rows'])
+    def cell(row, key):
+        value=row.get(key)
+        if ai and key=='requirement' and row.get('po_evidence_status')!='VERIFIED': return '원문 확인 필요'
+        if key=='result': return {'OUT_OF_RANGE':'부적합','MISMATCH':'불일치','PASS':'적합','NOT_CHECKED':'확인 필요'}.get(value,value)
+        if isinstance(value,dict) and 'value' in value: return f"{value['value']} {value.get('unit','')}".strip()
+        return value
+    rows=''.join('<tr>'+''.join(f'<td>{e(cell(row,k))}</td>' for k,_ in cols)+'</tr>' for row in r['rows'])
     headers=''.join(f'<th>{e(label)}</th>' for _,label in cols)
-    findings=''.join(f'<li>{e(f)}</li>' for f in r['findings']) or '<li>발견 사항 없음</li>'
+    findings=''.join(f"<li>{e(f.get('field'))} — {e(f.get('type'))}: {e(f.get('detail') or ('기준: '+str(f.get('expected',''))+' / 측정: '+str(f.get('actual',''))+' '+str(f.get('unit',''))))}</li>" for f in r['findings']) or '<li>발견 사항 없음</li>'
     identity=''
     if ai:
         keys=[('document','문서'),('field','항목'),('llm_raw','LLM 값'),('python_value','Python 값'),('comparison_value','검사값'),('comparison_source','출처'),('evidence_status','근거 상태'),('evidence','원문 근거')]
