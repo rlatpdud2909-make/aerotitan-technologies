@@ -60,6 +60,12 @@ def agent_ui():
         label={'CONFORMING':'적합','NONCONFORMING':'부적합','REVIEW_REQUIRED':'추가 검토 필요'}.get(result['verdict'],result['verdict'])
         st.subheader(f"문서 기반 사전 검토: {label} ({result['verdict']})")
         st.write('실행 모드:',result['mode'])
+        if result['mode']=='AI Agent Mode':
+            from src.agent.tool_registry import NAMES
+            called={x.get('tool') for x in result.get('tool_log',[]) if x.get('origin')=='model_function_call' and x.get('status')=='success' and x.get('tool') in NAMES}
+            st.caption(f'AI가 호출해 성공한 검증 도구: {len(called)} / {len(NAMES)}개. 상세 실행 기록에서 호출 주체와 실패 여부를 확인할 수 있습니다.')
+            if any(x.get('origin')=='python_report_fallback' and x.get('status')=='success' for x in result.get('tool_log',[])):
+                st.info('AI가 보고서 데이터 구성 도구를 완료하지 않아 Python이 별도로 실행했습니다. HTML 보고서는 별도 함수가 생성합니다.')
         st.write('소재:',result['mtr'].get('Material Grade'),'| 공급업체:',result['mtr'].get('Supplier'),'| Certificate:',result['mtr'].get('Certificate Number'))
         st.write('Heat:',result['mtr'].get('Heat Number'),'| Lot:',result['mtr'].get('Lot Number'))
         st.markdown('**요구조건과 검사 결과**')
@@ -125,9 +131,6 @@ def agent_ui():
             for index,(title,reason) in enumerate(checks):
                 st.checkbox(title,key=f'followup_check_{index}')
                 st.caption(reason)
-            st.markdown('**확인 결과에 따른 대응 검토**')
-            st.markdown('- 문서나 소재 식별정보가 불명확하면 원본과 실물을 다시 확인합니다.\n- 수치가 확인되면 내부 절차에 따라 추가 자료, 재시험 또는 공급업체 확인의 필요성을 검토합니다.\n- 조치 및 소재의 최종 처분은 담당자가 결정합니다.')
-            st.info('아직 확인되지 않은 원인, 실제 보류 상태, 추가 시험 필요 여부는 이 화면에서 확정하지 않습니다.')
             if st.button('AI 대응 방향 확인'):
                 st.session_state.pop('followup_draft',None)
                 st.session_state.pop('followup_email',None)
@@ -141,7 +144,7 @@ def agent_ui():
                 except Exception as exc: st.error(f'대응 방향을 정리하지 못했습니다: {type(exc).__name__}. AI 서비스 연결 상태를 확인하세요.')
             draft=st.session_state.get('followup_draft')
             if draft:
-                labels=[('situation','상황 정리'),('immediate','우선 확인할 사항'),('verify','원문과 소재 확인'),('options','결과에 따른 대응 선택지'),('caution','판단 시 주의사항')]
+                labels=[('immediate','이번 사례의 우선 확인'),('options','확인 결과에 따른 대응 선택지')]
                 for key,title in labels:
                     st.markdown(f'**{title} · AI 제안**');st.write(draft['draft'][key])
                 st.caption('AI 제안은 실행된 조치가 아닙니다. 내용과 근거를 확인한 뒤 담당자가 결정합니다.')
