@@ -15,9 +15,9 @@ def agent_ui():
     mode=st.radio('검토 방식',['Rule-Based Mode','AI Agent Mode'],horizontal=True,key='agent_mode',format_func=lambda x: '규칙 기반 검토' if x=='Rule-Based Mode' else 'AI 문서 검토')
     st.caption('규칙 기반 모드는 정해진 교육용 PDF 형식만 지원합니다. AI 모드는 선택한 API 설정이 필요합니다.')
     provider=st.radio('AI 서비스',['기본 AI','OpenAI'],horizontal=True,key='agent_provider') if mode=='AI Agent Mode' else 'OpenAI'
-    source=st.radio('문서 선택',['예시 문서','직접 업로드'],horizontal=True,key='agent_source')
+    source=st.radio('문서 선택',['문서','직접 업로드'],horizontal=True,key='agent_source')
     po=mtr=None
-    if source=='예시 문서':
+    if source=='문서':
         with (ROOT/'data/metadata/cases.csv').open(encoding='utf-8',newline='') as f: cases=[r for r in csv.DictReader(f) if r['split']=='development']
         item=st.selectbox('검토할 문서 선택',cases,format_func=lambda r:f"{r['case_id']} · {r['supplier'].replace(' (Fictional)', '')}",key='agent_case')
         po=(ROOT/item['purchase_order']).read_bytes();mtr=(ROOT/item['material_test_report']).read_bytes()
