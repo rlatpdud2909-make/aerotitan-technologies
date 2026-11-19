@@ -12,14 +12,14 @@ def setting(name):
 def agent_ui():
     st.markdown('### AeroTitan Quality Agent')
     st.warning('교육용 모의 데이터 전용입니다. 실제 기업 기밀자료를 업로드하지 마세요. 검토 결과는 최종 입고 승인이 아닙니다.')
-    mode=st.radio('분석 모드',['Rule-Based Mode','AI Agent Mode'],horizontal=True,key='agent_mode')
+    mode=st.radio('검토 방식',['Rule-Based Mode','AI Agent Mode'],horizontal=True,key='agent_mode',format_func=lambda x: '규칙 기반 검토' if x=='Rule-Based Mode' else 'AI 문서 검토')
     st.caption('규칙 기반 모드는 정해진 교육용 PDF 형식만 지원합니다. AI 모드는 선택한 API 설정이 필요합니다.')
     provider=st.radio('AI 서비스',['기본 AI','OpenAI'],horizontal=True,key='agent_provider') if mode=='AI Agent Mode' else 'OpenAI'
-    source=st.radio('문서 선택',['Demo 문서','직접 업로드'],horizontal=True,key='agent_source')
+    source=st.radio('문서 선택',['예시 문서','직접 업로드'],horizontal=True,key='agent_source')
     po=mtr=None
-    if source=='Demo 문서':
+    if source=='예시 문서':
         with (ROOT/'data/metadata/cases.csv').open(encoding='utf-8',newline='') as f: cases=[r for r in csv.DictReader(f) if r['split']=='development']
-        item=st.selectbox('분석할 개발용 사례',cases,format_func=lambda r:f"{r['case_id']} · {r['supplier']}",key='agent_case')
+        item=st.selectbox('검토할 문서 선택',cases,format_func=lambda r:f"{r['case_id']} · {r['supplier'].replace(' (Fictional)', '')}",key='agent_case')
         po=(ROOT/item['purchase_order']).read_bytes();mtr=(ROOT/item['material_test_report']).read_bytes()
     else:
         p=st.file_uploader('구매발주서 PDF',type='pdf',key='po_upload'); m=st.file_uploader('시험성적서 PDF',type='pdf',key='mtr_upload')
@@ -84,12 +84,12 @@ def agent_ui():
                 '출처':f.get('source','검증 도구')} for f in result['findings']],hide_index=True,width='stretch')
         else: st.write('발견 사항 없음')
         if result['verdict'] in ('NONCONFORMING','REVIEW_REQUIRED'):
-            st.markdown('### 부적합 후속 검토 지원')
-            st.caption('선택 기능: 검사 결과의 확인된 근거를 기본 AI에 전달해 담당자 확인 사항과 공급업체 문의 초안을 작성합니다. API가 추가 호출됩니다.')
-            st.warning('AI 초안은 오류가 있을 수 있습니다. 담당자가 원문과 수치, 문의 내용을 확인해야 하며 자동으로 발송되거나 승인되지 않습니다.')
+            st.markdown('### AI 후속 대응 방향')
+            st.caption('선택 기능: 확인된 검사 근거를 바탕으로 우선 확인 사항과 대응 선택지를 제안합니다. AI 요청이 추가됩니다.')
+            st.warning('제안은 담당자의 검토를 위한 참고 사항입니다. 확인되지 않은 원인은 추정하지 않으며 최종 조치와 승인은 담당자가 결정합니다.')
             from src.agent.followup_draft import verified_facts
             facts=verified_facts(result)
-            st.markdown('**초안에 사용할 확인된 검사 사실**')
+            st.markdown('**검사로 확인된 사실과 원문 근거**')
             shown=[]
             for fact in facts['verified_measurements']:
                 shown.append({'항목':fact['field'],'PO 요구조건':fact['requirement'],
@@ -102,37 +102,30 @@ def agent_ui():
                     'PO 근거':next((f"{r['page']}쪽: {r['quote']}" for r in fact['records'] if r['document']=='PO'),''),
                     'MTR 근거':next((f"{r['page']}쪽: {r['quote']}" for r in fact['records'] if r['document']=='MTR'),'')})
             if shown: st.dataframe(shown,hide_index=True,width='stretch')
-            else: st.info('초안에 전달할 원문 확인된 부적합 항목이 없습니다. 아래 초안은 원문 확인 안내에 한정될 수 있습니다.')
+            else: st.info('원문이 확인된 부적합 항목이 없습니다. 대응 방향은 원문 확인부터 시작해야 합니다.')
             if facts['unconfirmed_items']:
                 st.caption('미확인 항목은 원문에 값이 없다는 뜻이 아닙니다. 원문에서 다시 확인해야 합니다.')
                 st.dataframe(facts['unconfirmed_items'],hide_index=True,width='stretch')
-            if st.button('AI 후속 대응 초안 작성'):
+            if st.button('AI 대응 방향 확인'):
                 st.session_state.pop('followup_draft',None)
                 st.session_state.pop('followup_email',None)
                 st.session_state.pop('followup_subject',None)
                 try:
                     from src.agent.followup_draft import create_draft
-                    with st.spinner('후속 검토 초안을 작성하고 있습니다...'):
+                    with st.spinner('후속 대응 방향을 정리하고 있습니다...'):
                         draft=create_draft(result,setting('SCHOOL_API_KEY'),setting('SCHOOL_API_BASE_URL'),setting('SCHOOL_MODEL'))
                     st.session_state['followup_draft']=draft
-                except ValueError as exc: st.error(f'초안을 작성하지 못했습니다: {str(exc)[:200]}')
-                except Exception as exc: st.error(f'초안을 작성하지 못했습니다: {type(exc).__name__}. AI 서비스 연결 상태를 확인하세요.')
+                except ValueError as exc: st.error(f'대응 방향을 정리하지 못했습니다: {str(exc)[:200]}')
+                except Exception as exc: st.error(f'대응 방향을 정리하지 못했습니다: {type(exc).__name__}. AI 서비스 연결 상태를 확인하세요.')
             draft=st.session_state.get('followup_draft')
             if draft:
-                st.markdown('**담당자 확인 사항 · AI 초안**');st.write(draft['draft']['review'])
-                st.markdown('**공급업체에 확인할 내용 · AI 초안**');st.write(draft['draft']['supplier_request'])
-                st.markdown('**문의 이메일 초안 — 발송되지 않음**')
-                # Keep editable text legible even when the browser uses a dark theme.
-                st.markdown('''<style>
-                .st-key-followup_subject input, .st-key-followup_email textarea {
-                    color: #10243a !important; background-color: #ffffff !important;
-                    caret-color: #10243a !important;
-                }
-                </style>''',unsafe_allow_html=True)
-                subject=st.text_input('제목',value=draft['draft']['email_subject'],key='followup_subject')
-                body=st.text_area('본문',value=draft['draft']['email_body'],height=220,key='followup_email')
-                st.download_button('문의 초안 TXT 다운로드',f'검토 전 초안 — 자동 발송되지 않음\n제목: {subject}\n\n{body}',file_name='supplier_followup_draft.txt',mime='text/plain')
-                with st.expander('초안 작성에 전달된 확인 근거'): st.json(draft['facts'])
+                labels=[('situation','상황 정리'),('immediate','우선 확인할 사항'),('verify','원문과 소재 확인'),('options','결과에 따른 대응 선택지'),('caution','판단 시 주의사항')]
+                for key,title in labels:
+                    st.markdown(f'**{title} · AI 제안**');st.write(draft['draft'][key])
+                st.caption('AI 제안은 실행된 조치가 아닙니다. 내용과 근거를 확인한 뒤 담당자가 결정합니다.')
+                text='AI 후속 대응 제안 — 담당자 확인 필요\n\n'+'\n\n'.join(f"{title}\n{draft['draft'][key]}" for key,title in labels)
+                st.download_button('대응 방향 TXT 다운로드',text,file_name='quality_followup_guidance.txt',mime='text/plain')
+                with st.expander('AI에 전달된 검사 근거'): st.json(draft['facts'])
         if result['mode']=='AI Agent Mode':
             st.caption('다음 설명은 AI 생성 문장으로 별도 검증이 필요합니다. 판정은 프로그램 결과입니다.')
             st.write(result['summary'])

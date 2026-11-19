@@ -5,18 +5,18 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 
 def demo_library():
-    st.markdown('### Demo Document Library')
-    st.info('교육용 가상 문서입니다. 실제 소재 승인에 사용할 수 없습니다. 최종 시험 세트는 평가의 독립성을 위해 이 미리보기에서 제외합니다.')
+    st.markdown('### 입고검사 문서 자료실')
+    st.info('아래 문서는 교육용 모의 문서이며 실제 소재 승인에 사용할 수 없습니다.')
     path = ROOT / 'data/metadata/cases.csv'
     if not path.exists():
-        st.warning('모의 문서가 없습니다. 데이터 생성 스크립트를 실행하세요.')
+        st.warning('표시할 예시 문서가 없습니다.')
         return
     with path.open(encoding='utf-8', newline='') as f:
         cases = [r for r in csv.DictReader(f) if r['split'] == 'development']
     if not cases:
-        st.warning('개발용 문서가 없습니다.')
+        st.warning('표시할 예시 문서가 없습니다.')
         return
-    chosen = st.selectbox('개발용 사례 선택', cases, format_func=lambda r: f"{r['case_id']} · {r['supplier']}")
+    chosen = st.selectbox('문서 선택', cases, format_func=lambda r: f"{r['case_id']} · {r['supplier'].replace(' (Fictional)', '')}")
     st.write(f"소재: {chosen['material']} | 발주번호: {chosen['purchase_order_id']} | 성적서 번호: {chosen['certificate_id']}")
     kind = st.radio('문서 유형', ['구매발주서', '소재 시험성적서'], horizontal=True)
     field = 'purchase_order' if kind == '구매발주서' else 'material_test_report'
