@@ -27,10 +27,16 @@ def agent_ui():
     signature=hashlib.sha256((po or b'')+b'\0'+(mtr or b'')+mode.encode()+provider.encode()).hexdigest()
     if st.session_state.get('quality_signature') != signature:
         st.session_state.pop('quality_review',None)
+        st.session_state.pop('followup_draft',None)
+        st.session_state.pop('followup_email',None)
+        st.session_state.pop('followup_subject',None)
     if mode=='AI Agent Mode':
         st.caption('AI 문서 분석에는 시간이 걸릴 수 있습니다. 완료되면 아래에 검토 결과가 표시됩니다.')
     if st.button('AI 품질검사 실행' if mode=='AI Agent Mode' else '품질검사 실행',type='primary'):
         st.session_state.pop('quality_review',None)
+        st.session_state.pop('followup_draft',None)
+        st.session_state.pop('followup_email',None)
+        st.session_state.pop('followup_subject',None)
         if not po or not mtr: st.error('구매발주서와 시험성적서를 모두 선택하세요.')
         else:
             try:
@@ -77,6 +83,49 @@ def agent_ui():
                 '내용':f.get('detail') or ('기준: '+str(f.get('expected',''))+' / 측정: '+str(f.get('actual',''))+' '+str(f.get('unit',''))),
                 '출처':f.get('source','검증 도구')} for f in result['findings']],hide_index=True,width='stretch')
         else: st.write('발견 사항 없음')
+        if result['verdict'] in ('NONCONFORMING','REVIEW_REQUIRED'):
+            st.markdown('### 부적합 후속 검토 지원')
+            st.caption('선택 기능: 검사 결과의 확인된 근거를 기본 AI에 전달해 담당자 확인 사항과 공급업체 문의 초안을 작성합니다. API가 추가 호출됩니다.')
+            st.warning('AI 초안은 오류가 있을 수 있습니다. 담당자가 원문과 수치, 문의 내용을 확인해야 하며 자동으로 발송되거나 승인되지 않습니다.')
+            from src.agent.followup_draft import verified_facts
+            facts=verified_facts(result)
+            st.markdown('**초안에 사용할 확인된 검사 사실**')
+            shown=[]
+            for fact in facts['verified_measurements']:
+                shown.append({'항목':fact['field'],'PO 요구조건':fact['requirement'],
+                    'MTR 검사값':f"{fact['measurement']['value']} {fact['measurement']['unit']}",
+                    'PO 근거':'; '.join(f"{e.get('page','?')}쪽: {' '.join(e.get('quote','').split())}" for e in fact['po_evidence']),
+                    'MTR 근거':f"{fact['mtr_evidence']['page']}쪽: {' '.join((fact['mtr_evidence']['quote'] or '').split())}"})
+            for fact in facts['verified_identity']:
+                shown.append({'항목':fact['field'],'PO 요구조건':next((r['value'] for r in fact['records'] if r['document']=='PO'),''),
+                    'MTR 검사값':next((r['value'] for r in fact['records'] if r['document']=='MTR'),''),
+                    'PO 근거':next((f"{r['page']}쪽: {r['quote']}" for r in fact['records'] if r['document']=='PO'),''),
+                    'MTR 근거':next((f"{r['page']}쪽: {r['quote']}" for r in fact['records'] if r['document']=='MTR'),'')})
+            if shown: st.dataframe(shown,hide_index=True,width='stretch')
+            else: st.info('초안에 전달할 원문 확인된 부적합 항목이 없습니다. 아래 초안은 원문 확인 안내에 한정될 수 있습니다.')
+            if facts['unconfirmed_items']:
+                st.caption('미확인 항목은 원문에 값이 없다는 뜻이 아닙니다. 원문에서 다시 확인해야 합니다.')
+                st.dataframe(facts['unconfirmed_items'],hide_index=True,width='stretch')
+            if st.button('AI 후속 대응 초안 작성'):
+                st.session_state.pop('followup_draft',None)
+                st.session_state.pop('followup_email',None)
+                st.session_state.pop('followup_subject',None)
+                try:
+                    from src.agent.followup_draft import create_draft
+                    with st.spinner('후속 검토 초안을 작성하고 있습니다...'):
+                        draft=create_draft(result,setting('SCHOOL_API_KEY'),setting('SCHOOL_API_BASE_URL'),setting('SCHOOL_MODEL'))
+                    st.session_state['followup_draft']=draft
+                except ValueError as exc: st.error(f'초안을 작성하지 못했습니다: {str(exc)[:200]}')
+                except Exception as exc: st.error(f'초안을 작성하지 못했습니다: {type(exc).__name__}. AI 서비스 연결 상태를 확인하세요.')
+            draft=st.session_state.get('followup_draft')
+            if draft:
+                st.markdown('**담당자 확인 사항 · AI 초안**');st.write(draft['draft']['review'])
+                st.markdown('**공급업체에 확인할 내용 · AI 초안**');st.write(draft['draft']['supplier_request'])
+                st.markdown('**문의 이메일 초안 — 발송되지 않음**')
+                subject=st.text_input('제목',value=draft['draft']['email_subject'],key='followup_subject')
+                body=st.text_area('본문',value=draft['draft']['email_body'],height=220,key='followup_email')
+                st.download_button('문의 초안 TXT 다운로드',f'검토 전 초안 — 자동 발송되지 않음\n제목: {subject}\n\n{body}',file_name='supplier_followup_draft.txt',mime='text/plain')
+                with st.expander('초안 작성에 전달된 확인 근거'): st.json(draft['facts'])
         if result['mode']=='AI Agent Mode':
             st.caption('다음 설명은 AI 생성 문장으로 별도 검증이 필요합니다. 판정은 프로그램 결과입니다.')
             st.write(result['summary'])
