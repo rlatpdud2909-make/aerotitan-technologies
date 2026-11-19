@@ -36,30 +36,43 @@ def create_draft(result, api_key, base_url, model, client=None):
         '확인되지 않은 수치, 원인, 승인, 시험 결과의 정정 여부, 날짜, 문서 번호를 만들지 마세요. '
         '제공된 확인 사실이 없으면 원문 확인이 필요하다고 명시하세요. 결과는 사전 검토 결과이며 '
         '불합격 처리했다, 불합격 판정을 내린다, 최종 판정이나 처분이 확정됐다 같은 표현은 금지합니다. '
-        'PO는 구매발주서이며 공급자나 시험기관이 제출·발행한 문서라고 단정하지 마세요. MTR은 제출된 시험성적서이며 내부에서 직접 시험했다고 쓰지 마세요. '
+        'PO는 요구조건을 기재한 구매발주서이고 MTR은 측정값을 기재한 시험성적서입니다. 요구조건과 측정값이 동일해야 한다고 표현하지 마세요. '
+        'PO는 공급자나 시험기관이 제출·발행한 문서라고 단정하지 마세요. MTR은 제출된 시험성적서이며 내부에서 직접 시험했다고 쓰지 마세요. '
+        '제공되지 않은 문서 약어나 다른 문서를 만들지 마세요. '
         'unconfirmed_items는 미확인 항목이며 원문에 값이 존재하지 않는다는 뜻이 아닙니다. '
         '원인은 확인되지 않았으며 최종 결정은 담당자가 합니다. '
         '검사 사실과 확인되지 않은 사항을 구분하고 후속 대응을 실행한 것처럼 쓰지 마세요. 제공된 정보만으로 기타 미확인 사항이나 문제가 없다고 단정하지 마세요. '
-        '검사 사실과 공통 확인표는 화면에 이미 표시됩니다. 같은 내용을 길게 반복하지 마세요. '
-        '이 사례에 필요한 우선 확인과 확인 결과에 따른 조건부 선택지만 구체적으로 안내하세요. '
-        'immediate는 이미 확인했다는 반복이 아니라 담당자가 우선 검토할 행동을 제시하세요. '
-        'options는 "문서가 불명확하면 원본 확인", "시험값이 확인되면 내부 절차에 따라 재시험 필요성 검토"처럼 조건과 검토할 행동을 함께 제시하세요. '
+        '검사 사실과 공통 확인표는 화면에 이미 표시됩니다. 같은 내용을 반복하지 마세요. '
+        '이 사례에 필요한 서로 다른 세 가지 가상 확인 결과를 제시하고 각 결과에 따른 다음 검토 행동과 이유를 작성하세요. '
+        '문서나 소재 식별정보가 불명확한 경우, 이 검사에서 확인한 부적합이나 불일치가 원문에서 재확인되는 경우, '
+        '원인 또는 실제 소재 상태가 여전히 확인되지 않은 경우를 각각 조건으로 다루세요. '
+        '두 번째 조건은 "부적합이 재확인되는 경우" 같은 일반 표현 대신, 제공된 실제 문제 항목명을 포함하세요. '
+        '관련 확인값이 제공되었으면 기준과 측정값을 구분해 정확한 단위와 함께 행동 또는 이유에 언급하세요. '
+        '각 조건은 아직 발생하지 않은 가정이며, condition은 "~한 경우"로 쓰고 action은 실행 가능한 검토 행동, why는 한 문장 이유로 쓰세요. '
         '검증 가능한 근거가 부족하면 먼저 원문 확인을 권고하고 가정한 원인이나 해결책을 확정하지 마세요. '
         '재시험, 문서 정정, 공급업체 문의는 필요성과 승인 여부를 담당자가 검토할 선택지로만 제시하세요. '
         '이메일을 작성하지 마세요. 번호 목록 숫자는 쓰지 마세요. '
-        '한국어 JSON 객체만 반환하세요. 필수 키는 immediate, options이며 값은 문자열입니다.')
+        '한국어 JSON 객체만 반환하세요. 형식은 {"branches":[{"condition":"...","action":"...","why":"..."}]}이며 branches에는 서로 다른 세 항목이 필요합니다.')
     response=client.chat.completions.create(model=model,messages=[{'role':'system','content':system},{'role':'user','content':json.dumps(facts,ensure_ascii=False)}])
     if not response.choices or getattr(response.choices[0],'finish_reason',None)=='length': raise ValueError('AI 초안 응답이 비어 있거나 잘렸습니다.')
     raw=(response.choices[0].message.content or '').strip()
     if raw.startswith('```') and '\n' in raw: raw=raw.split('\n',1)[1].rsplit('```',1)[0].strip()
     try: draft=json.loads(raw)
     except (ValueError,TypeError) as exc: raise ValueError('AI 초안 형식을 확인할 수 없습니다.') from exc
-    keys=('immediate','options')
-    if not isinstance(draft,dict) or any(not isinstance(draft.get(k),str) or not draft[k].strip() for k in keys):
-        raise ValueError('AI 초안에 필수 내용이 빠졌습니다.')
+    if not isinstance(draft,dict) or not isinstance(draft.get('branches'),list) or len(draft['branches'])!=3:
+        raise ValueError('AI 제안에 필요한 세 가지 조건이 빠졌습니다.')
+    keys=('condition','action','why')
+    if any(not isinstance(branch,dict) or any(not isinstance(branch.get(k),str) or not branch[k].strip() for k in keys) for branch in draft['branches']):
+        raise ValueError('AI 제안에 조건, 검토 행동 또는 이유가 빠졌습니다.')
+    if len({b['condition'].strip() for b in draft['branches']})!=3:
+        raise ValueError('AI 제안에 중복된 조건이 있습니다.')
     if re.search(r'(불합격|부적합)\s*(처리|확정|통보)|판정을\s*내리|최종\s*(승인|판정).{0,12}(완료|확정|처리)|내부\s*(시험|측정)|기타\s*미확인\s*사항.{0,10}없',json.dumps(draft,ensure_ascii=False)):
         raise ValueError('AI 초안에 확인되지 않은 처분 또는 시험 출처가 포함되어 표시하지 않았습니다.')
     numbers=lambda x:set(re.findall(r'(?<![\d.])\d+(?:\.\d+)?',x))
     if numbers(json.dumps(draft,ensure_ascii=False))-numbers(json.dumps(facts,ensure_ascii=False)):
         raise ValueError('AI 초안에 확인되지 않은 숫자가 포함되어 표시하지 않았습니다.')
-    return {'draft':{k:draft[k] for k in keys},'facts':facts,'usage':str(getattr(response,'usage',None))}
+    acronyms=lambda s:set(re.findall(r'(?<![A-Za-z])[A-Z]{2,}(?![A-Za-z])',s))
+    permitted=acronyms(json.dumps(facts,ensure_ascii=False)) | {'PO','MTR','AI'}
+    if acronyms(json.dumps(draft,ensure_ascii=False))-permitted:
+        raise ValueError('AI 제안에 확인되지 않은 약어가 포함되어 표시하지 않았습니다.')
+    return {'draft':{'branches':[{k:branch[k] for k in keys} for branch in draft['branches']]},'facts':facts,'usage':str(getattr(response,'usage',None))}
